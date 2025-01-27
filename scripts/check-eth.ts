@@ -4,7 +4,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 async function main() {
-    const provider = new ethers.providers.JsonRpcProvider("https://abstract.leakedrpc.com", {
+    const provider = new ethers.providers.JsonRpcProvider("https://api.mainnet.abs.xyz", {
         chainId: 2741,
         name: 'Abstract'
     });

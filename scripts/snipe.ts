@@ -5,12 +5,19 @@ import * as dotenv from "dotenv";
 // Load environment variables from .env file
 dotenv.config();
 
-// Network Configuration (from hardhat.config.ts)
-const NETWORK_CONFIG = {
-    url: "https://abstract.leakedrpc.com",
-    chainId: 2741,
-    name: "Abstract"
-};
+// Network Configuration with multiple RPCs
+const NETWORK_CONFIGS = [
+    {
+        url: "https://abstract.leakedrpc.com",
+        chainId: 2741,
+        name: "Abstract (Leaked RPC)"
+    },
+    {
+        url: "https://api.mainnet.abs.xyz",
+        chainId: 2741,
+        name: "Abstract (Official RPC)"
+    }
+];
 
 const FACTORY_ADDRESS = "0xE1e98623082f662BCA1009a05382758f86F133b3";
 const WETH_ADDRESS = "0x3439153eb7af838ad19d56e1571fbd09333c2809";
@@ -41,14 +48,15 @@ const ROUTER_ABI = [
   "function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts)"
 ];
 
-async function isRPCFunctional(provider: ethers.providers.JsonRpcProvider): Promise<boolean> {
+async function isRPCFunctional(provider: ethers.providers.JsonRpcProvider, rpcName: string): Promise<boolean> {
+  console.log(`\nChecking ${rpcName}...`);
   try {
     const blockNumber = await provider.getBlockNumber();
-    console.log('Block number:', blockNumber);
+    console.log(`${rpcName} - Block number: ${blockNumber}`);
 
     const latestBlock = await provider.getBlock(blockNumber);
     if (!latestBlock) {
-      console.log('Failed to get latest block details');
+      console.log(`${rpcName} - Failed to get latest block details`);
       return false;
     }
 
@@ -56,13 +64,15 @@ async function isRPCFunctional(provider: ethers.providers.JsonRpcProvider): Prom
     const now = Date.now();
     
     if (now - blockTimestamp > FIVE_MINUTES) {
-      console.log('Chain appears stale - last block too old');
+      console.log(`${rpcName} - Chain appears stale - last block too old`);
       return false;
     }
 
+    console.log(`${rpcName} - RPC is functional!`);
     return true;
-  } catch (error) {
-    console.log('RPC check failed:', error);
+  } catch (error: any) {
+    // Handle error gracefully without full stack trace
+    console.log(`${rpcName} - RPC check failed - ${error.message || 'Unknown error'}`);
     return false;
   }
 }
@@ -117,48 +127,49 @@ async function main() {
   console.log("Starting RPC monitor and sniper...");
   await sendNotification("🔄 Starting RPC monitor and sniper...");
   
-  // Debug logging
-  console.log("Environment variables loaded:", {
-    hasPrivateKey: !!process.env.PRIVATE_KEY,
-    privateKeyLength: process.env.PRIVATE_KEY?.length
-  });
-  
-  // Use the same network config as hardhat.config.ts
-  const provider = new ethers.providers.JsonRpcProvider(NETWORK_CONFIG.url, {
-    chainId: NETWORK_CONFIG.chainId,
-    name: NETWORK_CONFIG.name
-  });
-
   if (!process.env.PRIVATE_KEY) {
     throw new Error("PRIVATE_KEY not found in .env file");
   }
 
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-  console.log(`Using wallet address: ${wallet.address}`);
-  
+  // Create providers for each RPC
+  const providers = NETWORK_CONFIGS.map(config => ({
+    provider: new ethers.providers.JsonRpcProvider(config.url, {
+      chainId: config.chainId,
+      name: config.name
+    }),
+    name: config.name,
+    url: config.url
+  }));
+
+  let lastWorkingRPC = "";
+
   while (true) {
-    const isRPCWorking = await isRPCFunctional(provider);
-    
-    // Only notify on status changes to avoid spam
-    if (isRPCWorking !== lastRPCStatus) {
-      lastRPCStatus = isRPCWorking;
-      if (isRPCWorking) {
-        await sendNotification("✅ RPC is now functional! Attempting to snipe...");
-      } else {
-        await sendNotification("❌ RPC is not functional");
-      }
-    }
-    
-    if (isRPCWorking) {
-      const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, wallet);
-      const path = [WETH_ADDRESS, TOKEN_ADDRESS];
-      const amountIn = ethers.utils.parseEther(ETH_AMOUNT);
+    console.log("\n--- Checking RPCs ---");
+    // Check all RPCs
+    for (const { provider, name, url } of providers) {
+      const isRPCWorking = await isRPCFunctional(provider, name);
       
-      if (await attemptSwap(router, path, wallet, amountIn)) {
-        process.exit(0);
+      if (isRPCWorking) {
+        if (lastWorkingRPC !== url) {
+          lastWorkingRPC = url;
+          console.log(`\n🟢 ${name} is now functional and will be used for transactions`);
+          await sendNotification(`✅ Using ${name} for transactions`);
+        }
+        
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, wallet);
+        const path = [WETH_ADDRESS, TOKEN_ADDRESS];
+        const amountIn = ethers.utils.parseEther(ETH_AMOUNT);
+        
+        if (await attemptSwap(router, path, wallet, amountIn)) {
+          process.exit(0);
+        }
+      } else {
+        if (lastWorkingRPC === url) {
+          lastWorkingRPC = "";
+          await sendNotification(`❌ ${name} is no longer functional`);
+        }
       }
-    } else {
-      console.log("RPC not fully functional yet");
     }
     
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -168,4 +179,4 @@ async function main() {
 main().catch((error) => {
   console.error(error);
   sendNotification(`❌ Script error: ${error.message}`).finally(() => process.exit(1));
-}); 
+});

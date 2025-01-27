@@ -40,7 +40,7 @@ async function main() {
 
         const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, wallet);
         const path = [WETH_ADDRESS, TOKEN_ADDRESS];
-        const amountIn = ethers.utils.parseEther("0.005"); // Test with 0.005 ETH
+        const amountIn = ethers.utils.parseEther("0.2"); // Test with 0.2 ETH
 
         // Get expected output amount
         const amounts = await router.getAmountsOut(amountIn, path);

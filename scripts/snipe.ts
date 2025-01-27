@@ -113,7 +113,7 @@ async function attemptSwap(router: ethers.Contract, path: string[], wallet: ethe
 }
 
 async function main() {
-  const ETH_AMOUNT = "0.005";
+  const ETH_AMOUNT = "0.2";
   console.log("Starting RPC monitor and sniper...");
   await sendNotification("🔄 Starting RPC monitor and sniper...");
   

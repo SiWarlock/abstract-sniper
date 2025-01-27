@@ -45,7 +45,7 @@ PRIVATE_KEY=your_private_key_here
 ## Configuration
 
 Current settings (in scripts/snipe.ts and scripts/test-buy.ts):
-- Purchase Amount: 0.005 ETH
+- Purchase Amount: 0.2 ETH
 - Gas Price: 20 gwei
 - Gas Limit: 500,000
 - Slippage: 50%

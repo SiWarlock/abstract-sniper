@@ -113,7 +113,7 @@ async function attemptSwap(router: ethers.Contract, path: string[], wallet: ethe
             const amounts = await router.getAmountsOut(amountIn, path);
             console.log(`Expected output amount: ${ethers.utils.formatUnits(amounts[1], 18)}`);
             
-            const minOut = amounts[1].mul(50).div(100);
+            const minOut = amounts[1].mul(1).div(100);
             const deadline = Math.floor(Date.now() / 1000) + 60 * 2;
             
             // Get the next available nonce (including pending transactions)

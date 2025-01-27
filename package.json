@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node scripts/snipe.ts",
     "balance": "ts-node scripts/check-eth.ts",
-    "test-buy": "ts-node scripts/test-buy.ts"
+    "test-buy": "ts-node scripts/test-buy.ts",
+    "test-eth": "ts-node scripts/test-eth-snipe.ts"
   },
   "keywords": [],
   "author": "",

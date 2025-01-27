@@ -78,48 +78,61 @@ async function isRPCFunctional(provider: ethers.providers.JsonRpcProvider, rpcNa
 }
 
 async function attemptSwap(router: ethers.Contract, path: string[], wallet: ethers.Wallet, amountIn: ethers.BigNumber): Promise<boolean> {
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      console.log(`Swap attempt ${attempt}/${MAX_RETRIES}`);
-      await sendNotification(`🚀 Attempting swap ${attempt}/${MAX_RETRIES}`);
-      
-      const amounts = await router.getAmountsOut(amountIn, path);
-      console.log(`Expected output amount: ${ethers.utils.formatEther(amounts[1])} tokens`);
-      
-      const minOut = amounts[1].mul(50).div(100);
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 2;
-      
-      const tx = await router.swapExactETHForTokens(
-        minOut,
-        path,
-        wallet.address,
-        deadline,
-        { 
-          value: amountIn,
-          gasLimit: 500000,
-          gasPrice: ethers.utils.parseUnits("20", "gwei"),  // Doubled gas price for higher priority
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            console.log(`Swap attempt ${attempt}/${MAX_RETRIES}`);
+            await sendNotification(`🚀 Attempting swap ${attempt}/${MAX_RETRIES}`);
+            
+            const amounts = await router.getAmountsOut(amountIn, path);
+            console.log(`Expected output amount: ${ethers.utils.formatUnits(amounts[1], 18)}`);
+            
+            const minOut = amounts[1].mul(50).div(100);
+            const deadline = Math.floor(Date.now() / 1000) + 60 * 2;
+            
+            // Get the next available nonce (including pending transactions)
+            const nonce = await wallet.getTransactionCount("pending");
+            console.log(`Using nonce: ${nonce}`);
+            
+            const tx = await router.swapExactETHForTokens(
+                minOut,
+                path,
+                wallet.address,
+                deadline,
+                { 
+                    value: amountIn,
+                    gasLimit: 500000,
+                    gasPrice: ethers.utils.parseUnits("20", "gwei"),
+                    nonce: nonce // Explicitly set the nonce
+                }
+            );
+            
+            console.log(`Transaction sent! Hash: ${tx.hash}`);
+            await sendNotification(`📝 Transaction sent! Hash: ${tx.hash}`);
+            
+            await tx.wait();
+            console.log("Transaction confirmed! Swap successful!");
+            await sendNotification("✅ Swap successful! Transaction confirmed!");
+            return true;
+        } catch (error: any) {
+            // More detailed error logging
+            console.log(`\nAttempt ${attempt} failed with error:`);
+            console.log(`- Message: ${error.message}`);
+            if (error.transaction) {
+                console.log(`- From: ${error.transaction.from}`);
+                console.log(`- To: ${error.transaction.to}`);
+                console.log(`- Gas Price: ${ethers.utils.formatUnits(error.transaction.gasPrice || "0", "gwei")} gwei`);
+                console.log(`- Nonce: ${error.transaction.nonce}`);
+            }
+            await sendNotification(`❌ Swap attempt ${attempt} failed: ${error.message}`);
+            if (attempt === MAX_RETRIES) {
+                console.log("Max retry attempts reached");
+                await sendNotification("⚠️ Max retry attempts reached, monitoring RPC...");
+                return false;
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-      );
-      
-      console.log(`Transaction sent! Hash: ${tx.hash}`);
-      await sendNotification(`📝 Transaction sent! Hash: ${tx.hash}`);
-      
-      await tx.wait();
-      console.log("Transaction confirmed! Snipe successful!");
-      await sendNotification("✅ Snipe successful! Transaction confirmed!");
-      return true;
-    } catch (error: any) {
-      console.log(`Attempt ${attempt} failed:`, error.message);
-      await sendNotification(`❌ Swap attempt ${attempt} failed: ${error.message}`);
-      if (attempt === MAX_RETRIES) {
-        console.log("Max retry attempts reached");
-        await sendNotification("⚠️ Max retry attempts reached, monitoring RPC...");
-        return false;
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000));
     }
-  }
-  return false;
+    return false;
 }
 
 async function main() {

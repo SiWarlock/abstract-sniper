@@ -80,6 +80,23 @@ async function isRPCFunctional(provider: ethers.providers.JsonRpcProvider, rpcNa
 async function attemptSwap(router: ethers.Contract, path: string[], wallet: ethers.Wallet, amountIn: ethers.BigNumber): Promise<boolean> {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
+            // Check balance before attempting swap
+            const balance = await wallet.getBalance();
+            if (balance.lt(amountIn)) {
+                console.log(`\nInsufficient balance for swap:`);
+                console.log(`- Required: ${ethers.utils.formatEther(amountIn)} ETH`);
+                console.log(`- Current: ${ethers.utils.formatEther(balance)} ETH`);
+                await sendNotification(`⚠️ Insufficient balance: ${ethers.utils.formatEther(balance)} ETH / ${ethers.utils.formatEther(amountIn)} ETH required`);
+                
+                // Wait for sufficient balance before next attempt
+                while ((await wallet.getBalance()).lt(amountIn)) {
+                    console.log("Waiting for sufficient balance...");
+                    await new Promise(resolve => setTimeout(resolve, 2500)); // Wait 5 seconds
+                }
+                console.log("\nSufficient balance now available!");
+                await sendNotification("✅ Sufficient balance now available for swap");
+            }
+
             console.log(`Swap attempt ${attempt}/${MAX_RETRIES}`);
             await sendNotification(`🚀 Attempting swap ${attempt}/${MAX_RETRIES}`);
             
@@ -102,7 +119,7 @@ async function attemptSwap(router: ethers.Contract, path: string[], wallet: ethe
                     value: amountIn,
                     gasLimit: 500000,
                     gasPrice: ethers.utils.parseUnits("20", "gwei"),
-                    nonce: nonce // Explicitly set the nonce
+                    nonce: nonce
                 }
             );
             

@@ -65,7 +65,6 @@ Current settings (in scripts/snipe.ts and scripts/test-buy.ts):
 
 To snipe a different token:
 1. Replace `TOKEN_ADDRESS` in both `scripts/snipe.ts` and `scripts/test-buy.ts` with your desired token address
-2. Make sure to test with `npm run test-buy` before running the sniper
 
 ## Safety
 

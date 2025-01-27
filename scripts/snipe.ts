@@ -21,6 +21,11 @@ const NETWORK_CONFIGS = [
         url: "https://api.mainnet.abs.xyz",
         chainId: 2741,
         name: "Abstract (Mainnet RPC)"
+    },
+    {
+        url: "https://abs.xyz",
+        chainId: 2741,
+        name: "Abstract (Base RPC)"
     }
 ];
 

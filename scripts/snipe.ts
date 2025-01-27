@@ -13,9 +13,14 @@ const NETWORK_CONFIGS = [
         name: "Abstract (Leaked RPC)"
     },
     {
-        url: "https://api.mainnet.abs.xyz",
+        url: "https://api.abs.xyz",
         chainId: 2741,
         name: "Abstract (Official RPC)"
+    },
+    {
+        url: "https://api.mainnet.abs.xyz",
+        chainId: 2741,
+        name: "Abstract (Mainnet RPC)"
     }
 ];
 

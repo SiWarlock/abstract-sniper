@@ -26,6 +26,11 @@ const NETWORK_CONFIGS = [
         url: "https://abs.xyz",
         chainId: 2741,
         name: "Abstract (Base RPC)"
+    },
+    {
+        url: "https://abstract-mainnet.public.blastapi.io",
+        chainId: 2741,
+        name: "Abstract (Blast API)"
     }
 ];
 
